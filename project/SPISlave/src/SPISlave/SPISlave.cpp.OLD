@@ -1,0 +1,96 @@
+#include <spiSlaveManager.h>
+#include <shiftRegManager.h>
+#include <tempSens.h>
+#include <StepperManager.h>
+#include <heaterManager.h>
+#include <TMManager.h>
+
+SpiSlaveManager spiSM = SpiSlaveManager(); // SPI class
+ShiftRegManager srm(2, 3, 4); //set shiftRegister latchPin(green),dataPin(blue) and clockPin(yellow)
+TempSensManager tempS(5); //Sensor Temperature class manager
+StepperManager stepperM1(32, A0, A1, A2, A3, 700);
+HeaterManager heaterManager(9, 0);
+TMManager tmManager = TMManager();
+
+int tries = 0;
+
+int led = 9;           // the PWM pin the LED is attached to
+int brightness = 0;    // how bright the LED is
+int fadeAmount = 2;
+
+void setup (void) {
+
+  Serial.begin (9600);
+
+  srm.updateShiftRegister(0);
+
+  delay(10);
+}
+
+void loop (void) {
+
+  if (spiSM.isByteReceived()) {
+    byte data = SPDR; // read SPI data register
+
+    if (data == '0') {
+      switch (data) {
+      case '6':
+        heaterManager.increaseBrightness(100);
+        delay(1000);
+        heaterManager.decreaseBrightness(50);
+        delay(1000);
+        heaterManager.decreaseBrightness(100);
+        break;
+
+      case '7':
+        srm.updateShiftRegister(srm.turnONLeds(5));
+        delay(1000);
+        srm.updateShiftRegister(srm.turnONLeds(2));
+        delay(1000);
+        srm.updateShiftRegister(srm.turnOFFLeds(2));
+        delay(1000);
+
+        srm.statusLeds_ = 0;
+        srm.updateShiftRegister(srm.statusLeds_);
+        break;
+
+      case '8':
+        delay(500);
+        switch (tries) {
+	case 0:
+	  Serial.println(tries, DEC);
+	  tempS.checkTemp();
+	  ++tries;
+	  break;
+	case 1:
+	  SPDR = tempS.tempData_[2];
+	  ++tries;
+	  break;
+	case 2:
+	  SPDR = tempS.tempData_[3];
+	  tries = 0;
+	  break;
+        }
+        Serial.print("Temperature: ");
+        Serial.print(tempS.tempData_[2]);
+        Serial.print(".");
+        Serial.println(tempS.tempData_[3]);
+        break;
+      case'9':
+        stepperM1.runMotor();
+        break;
+      default:
+        break;
+      }
+    } else {
+      //scrivi nel buffer
+      if(tmManager.tmDataBuffer1.marker_ < tmManager.tmDataBuffer1.arrayBuffer_.size()){
+	tmManager.tmDataBuffer1.arrayBuffer_[tmManager.tmDataBuffer1.marker_] = data;
+	++tmManager.tmDataBuffer1.marker_;
+	Serial.println("------");
+      } else {
+	tmManager.tmDataBuffer1.marker_ = 0;
+      }     
+    } 
+  }
+}
