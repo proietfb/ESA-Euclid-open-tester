@@ -2,4 +2,4 @@ Euclid is an ESA Cosmic Mission aimed to understand the origin of universe accel
 
 As far as possible we want comply with the state of art and emulate above components using hardware low cost and open licence.
 
-For detailed informations see related [documentation](./doc/summary.md).
+For detailed informations about ESA mission see related [ESA-Euclid webpage](http://sci.esa.int/euclid/).
